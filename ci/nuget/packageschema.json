@@ -1,0 +1,32 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema",
+    "type":"object",
+    "properties": {
+        "options":{
+            "type":"object",
+            "properties": {
+                "saveDirectory":{
+                    "type":"string"
+                }
+            }
+        },
+        "packages":{
+            "type":"array",
+            "items": {
+                "type":"object",
+                "properties": {
+                    "name":{
+                        "type":"string"
+                    },
+                    "version":{
+                        "type":"string"
+                    },
+                    "prerelease":{
+                        "type":"boolean",
+                        "default":false
+                    }
+                }
+            }
+        }
+    }
+}

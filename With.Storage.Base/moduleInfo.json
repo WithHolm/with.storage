@@ -1,0 +1,12 @@
+{
+    "datafile":{
+        "Guid": "5b4635f7-b0d9-4adc-95e1-be09e69f521d",
+        "Description": "Helpmodule used to store commonly used code used by all with.storage.* modules",
+        "RequiredModules": [
+            "Az.Storage",
+            "Az.Accounts"
+        ]
+    },
+    "packages":[
+    ]
+}

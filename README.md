@@ -1,2 +1,2 @@
-# with.storage.queue
+# with.storage
 Module For handling azure storage queues

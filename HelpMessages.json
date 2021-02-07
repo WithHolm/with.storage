@@ -1,0 +1,5 @@
+{
+    "QueueClient":"Storage Queue client. use get/new/connect-funclient to generate client",
+    "Timespan_types":"[String] or [Timespan]",
+    "Timespan_protocoll":"String should follow protocoll: '-1' = infinity, '1' = 1 day, '1:0' = 1 hour, '0:1' = 1 minute, '0:0:1' = 1 second"
+}
