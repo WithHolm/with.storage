@@ -10,8 +10,7 @@ Properties {
     $StorageEmulatorPath = "C:\Program Files (x86)\Microsoft SDKs\Azure\Storage Emulator\AzureStorageEmulator.exe"
     $ModulePath = Join-Path $TempFolder $ModuleName
     $ModuleFile = Join-Path $ModulePath "$ModuleName.psm1"
-
-    # gci $ModulePath
+    $BaseName = "With.Storage"
 }
 
 task default 
@@ -37,9 +36,15 @@ task CopyToTemp{
         Write-Host "Cleaning '$TempFolder'"
         Get-ChildItem $TempFolder -Force | remove-item -Recurse -Force
     }
-
-    Write-host "copying from '$($psake.build_script_dir)' to '$TempFolder'"
-    gci $($psake.build_script_dir) -Filter $ModuleName -Force | copy-item -Destination $TempFolder -Recurse -Force
+    $ModuleDir = gci $($psake.build_script_dir) -Filter "$ModuleName.psm1" -Force -Recurse -File|%{$_.Directory}
+    if(@($ModuleDir).count -ne 1)
+    {
+        throw "Was suppoed to find one '$modulename.psm1' file. found $(@($ModuleDir).count)"
+    }
+    else {
+        Write-host "copying from '$($ModuleDir.FullName)' to '$TempFolder'"
+        $ModuleDir| copy-item -Container -Destination (join-path $TempFolder $ModuleName) -Recurse -Force
+    }
 }
 
 #-depends checkPowerShellVersion, test, build, publish

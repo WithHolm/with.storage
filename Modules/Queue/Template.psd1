@@ -52,12 +52,15 @@ Description = 'Module to handle azure storage queue'
 
 # Modules that must be imported into the global environment prior to importing this module
 RequiredModules = @(
-    "Az.Storage",
-    "Az.Accounts"
+    # "Az.Storage",
+    # "Az.Accounts"
 )
 
 # Assemblies that must be loaded prior to importing this module
-# RequiredAssemblies = @()
+RequiredAssemblies = @(
+    "nuget/Microsoft.Azure.Storage.Common.dll"
+    "nuget/Microsoft.Azure.Storage.Queue.dll"
+)
 
 # Script files (.ps1) that are run in the caller's environment prior to importing this module.
 # ScriptsToProcess = @()
@@ -122,7 +125,6 @@ PrivateData = @{
         # ExternalModuleDependencies = @()
 
     } # End of PSData hashtable
-
 } # End of PrivateData hashtable
 
 # HelpInfo URI of this module
