@@ -1,3 +1,4 @@
+using namespace Microsoft.Azure.Storage
 function Get-StorageQueueMessage {
     [CmdletBinding(DefaultParameterSetName="Get")]
     [outputtype([Microsoft.Azure.Storage.Queue.CloudQueueMessage])]

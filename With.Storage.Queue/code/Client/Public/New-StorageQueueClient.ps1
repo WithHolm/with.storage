@@ -1,4 +1,6 @@
 using namespace Microsoft.Azure.Storage
+# using module az.resources
+# using module az.storage
 
 <#
 .SYNOPSIS
@@ -18,12 +20,13 @@ An example
 General notes
 #>
 function New-StorageQueueClient {
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName = "Connectionstring")]
     [outputtype([Microsoft.Azure.Storage.Queue.CloudQueueClient])]
     param (
-        [parameter(HelpMessage="Storage account connection string. 
+        [parameter(ParameterSetName = "Connectionstring" ,HelpMessage="Storage account connection string. 
             if you have a environment variable that stores this key, you can define the variable name by setting 'fun_cs' in environment or app config.")]
-        [String]$Connectionstring = (Get-FunConnectionString)
+        [String]$Connectionstring = (Get-FunConnectionString),
+        # [Microsoft.Azure.Commands.ResourceManager.Cmdlets.SdkModels.PSResource]
     )
     
     begin {

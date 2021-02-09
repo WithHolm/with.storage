@@ -1,3 +1,4 @@
+using namespace Microsoft.Azure.Storage
 function Remove-StorageQueueMessage {
     [CmdletBinding()]
     param (

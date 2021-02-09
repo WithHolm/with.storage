@@ -1,10 +1,11 @@
 task cleanModule {
-    gci $ModulePath -Filter "tests.ps1" -File -Recurse|Remove-Item
-    gci $ModulePath -Directory -Recurse|?{(gci $_.FullName -Recurse -Force).count -eq 0}
+    write-host "cleaning $ModulePath for pester files"
+    gci $ModulePath -Filter "*tests.ps1" -File -Recurse|Remove-Item -Recurse
+    gci $ModulePath -Directory -Recurse|?{(gci $_.FullName -Force).count -eq 0}|remove-item -Force
+    gci $ModulePath -Filter ".nuget"|Remove-Item
 }
 
 task createManifest -depends cleanmodule {
-    # Write-host $ModulePath
     $TemplateFile = join-path $ModulePath "template.psd1"
     $moduleFile = get-item $ModuleFile
     if(!(test-path $TemplateFile))
@@ -34,13 +35,13 @@ task createManifest -depends cleanmodule {
     {
         $datafile.CmdletsToExport = @()
     }
-    $datafile.CmdletsToExport += @($ExportCommands)
 
     if(!$datafile.FunctionsToExport)
     {
         $datafile.FunctionsToExport = @()
     }
-    $datafile.FunctionsToExport += @($ExportCommands)
+
+    $datafile.FunctionsToExport += $datafile.CmdletsToExport += @($ExportCommands)
 
     #Add psData
     $datafile.privatedata.PSData.ProjectUri = "https://github.com/withholm/with.storage"
@@ -59,4 +60,6 @@ task createManifest -depends cleanmodule {
     $datafile.path = (join-path $ModulePath "$($moduleFile.BaseName).psd1")
 
     New-ModuleManifest @datafile
+
+    get-item $TemplateFile|Remove-Item
 }

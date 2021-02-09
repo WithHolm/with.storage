@@ -47,6 +47,13 @@ function New-StorageQueueMessage {
     begin {
         $messageString = $($data -join '')
 
+
+    }
+    process {
+        
+    }
+    end {
+
         #if string is sent in as base64, check if its encoding
         if($AsBase64)
         {
@@ -55,8 +62,7 @@ function New-StorageQueueMessage {
             $messageString = [convert]::ToBase64String($bytes)
             $Queue.EncodeMessage = $true
         }
-    }
-    process {
+
         $Message = [Microsoft.Azure.storage.queue.CloudQueueMessage]::new($messageString,$AsBase64.IsPresent)
         Write-Verbose "Message is: $($message|ConvertTo-Json)"
 
@@ -79,5 +85,4 @@ function New-StorageQueueMessage {
             return $AsyncPut
         }
     }
-    end {}
 }
