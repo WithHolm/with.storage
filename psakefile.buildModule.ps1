@@ -1,3 +1,5 @@
+task compile -depends prep,createManifest
+
 task cleanModule {
     write-host "cleaning $ModulePath for pester files"
     gci $ModulePath -Filter "*tests.ps1" -File -Recurse|Remove-Item -Recurse

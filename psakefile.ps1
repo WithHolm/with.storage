@@ -11,15 +11,18 @@ Properties {
     $ModulePath = Join-Path $TempFolder $ModuleName
     $ModuleFile = Join-Path $ModulePath "$ModuleName.psm1"
     $BaseName = "With.Storage"
+    $pesterHelp = gci "$($psake.build_script_dir)/ci/pester"
 }
 
 task default 
 
-task prep -depends checkPowerShellVersion
+task build -depends prep,test,compile
+task prep -depends checkPowerShellVersion,CopyToTemp,Pester_addGeneralTestsToTemp
 
-task BuildModule -depends prep,CopyToTemp,createManifest
-
-& "$($psake.build_script_dir)\psakefile.modulebuild.ps1"
+gci $psake.build_script_dir -Filter "psakefile.*.ps1"|%{
+    Write-host "importing $_"
+    & $_.FullName
+}
 
 task checkPowerShellVersion {
     Assert ($PSVersionTable.PSVersion -ge 7.0.0) -failureMessage "build needs pwsh 7 or newer"
@@ -43,7 +46,7 @@ task CopyToTemp{
     }
     else {
         Write-host "copying from '$($ModuleDir.FullName)' to '$TempFolder'"
-        $ModuleDir| copy-item -Container -Destination (join-path $TempFolder $ModuleName) -Recurse -Force
+        $ModuleDir| copy-item -Container -Destination ModulePath -Recurse -Force
     }
 }
 
@@ -52,94 +55,6 @@ task CopyToTemp{
 # task build -depends checkPowerShellVersion, build_clean_pester, build_create_manifest, build_create_docs
 
 # task test -depends checkPowerShellVersion, pester_CheckStorageEmulator, pester_enable, pester_import, pester, pester_disable
-
-
-task pester_enable { 
-    $global:pesteractive = $true 
-}
-
-task pester_disable { 
-    $global:pesteractive = $false 
-}
-
-task pester_import { 
-    Write-Host "importing $ModulePath"
-    Import-Module $ModulePath -Force
-}
-
-# task pester_CheckStorageEmulator -precondition { $env:CI -ne $true } {
-#     if (test-path $StorageEmulatorPath)
-#     {
-#         # command ConvertFrom-StringData
-#         # command ConvertFrom-StringData|select Parametersets
-#         #get status, convert output to a object
-#         $statusSb = { exec -cmd { & $StorageEmulatorPath status } | Where-Object { $_ -like "*:*" } | ConvertFrom-StringData -Delimiter ':' }
-#         $status = $statusSb.Invoke()
-#         #if its not started
-#         if (![bool]::Parse($status.isrunning))
-#         {
-#             Write-host "starting storage emulator"
-#             exec -cmd { & $StorageEmulatorPath start }
-
-#             start-sleep -Seconds 1
-
-#             Write-host "Confirming that its started"
-#             $status = $statusSb.Invoke()
-#             if (![bool]::Parse($status.isrunning))
-#             {
-#                 throw "Cannot start storage emulator"
-#             }
-#         }
-#     }
-#     else
-#     {
-#         Throw "Could not find Azure storage Emulator at given location: '$StorageEmulatorPath'. please install: https://docs.microsoft.com/en-us/azure/storage/common/storage-use-emulator"
-#     }
-# }
-
-# task SetupLocalConnectionString { $env:CI -ne $true } {
-#     # Standard key to storage emulator
-#     $keyhash = [ordered]@{
-#         DefaultEndpointsProtocol = "http"
-#         AccountName              = 'devstoreaccount1'
-#         AccountKey               = 'Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw=='
-#         BlobEndpoint             = "http://127.0.0.1:10000/devstoreaccount1"
-#         TableEndpoint            = "http://127.0.0.1:10002/devstoreaccount1"
-#         QueueEndpoint            = "http://127.0.0.1:10001/devstoreaccount1"
-#     }
-#     $env:PesterStorageConnectionString = ($keyhash.GetEnumerator() | % { 
-#             "$($_.Key)=$($_.Value);" }) -join ""
-# }
-
-# task Pester -action {
-
-#     $test = @{
-#         Path = (join-path $psake.build_script_dir "GeneralPester.ps1")
-#         Parameters = @{module = [System.IO.FileInfo]$ModuleFile } 
-#     }
-#     # $test|ConvertTo-Json
-
-#     Invoke-Pester -Script $test
-
-#     $TestFiles = Get-ChildItem $ModulePath -Recurse -Filter "*.tests.ps1" -File
-#     $total = 0
-#     foreach ($tag in 'module', "cmdlet")
-#     {
-#         write-host "testing '$tag'"
-        
-#         $pester = invoke-pester $TestFiles.fullname -PassThru -Tag $tag -Output Detailed
-#         if ($pester.FailedCount -gt 0)
-#         {
-#             throw "$tag tests: $($pester.FailedCount) pester tests failed"
-#         }
-#         else
-#         {
-#             $total += $pester.TotalCount
-#         }
-#     }
-#     Write-Host "$total tests completed. no erors found!"
-
-# }
 
 # task build_clean_tempfolder {
 #     if (!(Test-Path $TempFolder))

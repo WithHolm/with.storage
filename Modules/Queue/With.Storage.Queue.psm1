@@ -1,20 +1,34 @@
-# $InformationPreference = "Continue"
-# # $ExportFunctions = @()
-# if($PSScriptRoot)
-# Get-ChildItem $PSScriptRoot -Recurse -Filter "*.ps1"|Where-Object{$($_.Directory.Name) -eq "Public" -or $($_.Directory.Name) -eq "Private"}|ForEach-Object{
-#     # Write-Information "Importing $_"
-#     . $_.FullName
-# }
 
-# if($global:pesteractive -eq $true)
-# {
-#     Get-ChildItem $PSScriptRoot -Recurse -Filter "*.ps1"|Where-Object{$($_.Directory.Name) -eq "pester"}|ForEach-Object{
-#         # Write-Information "Importing $_"
-#         . $_.FullName
-#     }
-# }
+#used for loading all file when developing
+if(test-path (join-path $PSScriptRoot 'Template.psd1'))
+{
+    gci $PSScriptRoot -Recurse -Filter '*.ps1'|?{$_.name -notlike "*.tests.ps1"}|%{
+        . $_.FullName
+    }
+}
 
-# $global:fun = @{
-#     Async = $false
-# }
-# # if($global)
+Set-StrictMode -Version Latest
+function Test-DotNet
+{
+    try
+    {
+        if ((Get-PSDrive 'HKLM' -ErrorAction Ignore) -and (-not (Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full\' -ErrorAction Stop | Get-ItemPropertyValue -ErrorAction Stop -Name Release | Where { $_ -ge 461808 })))
+        {
+            throw ".NET Framework versions lower than 4.7.2 are not supported in this module.  Please upgrade to .NET Framework 4.7.2 or higher."
+        }
+    }
+    catch [System.Management.Automation.DriveNotFoundException]
+    {
+        Write-Verbose ".NET Framework version check failed."
+    }
+}
+
+if ($true -and ($PSEdition -eq 'Desktop'))
+{
+    if ($PSVersionTable.PSVersion -lt [Version]'5.1')
+    {
+        throw "PowerShell versions lower than 5.1 are not supported in this module. Please upgrade to PowerShell 5.1 or higher."
+    }
+
+    Test-DotNet
+}
