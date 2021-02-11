@@ -125,6 +125,9 @@ PrivateData = @{
         # ExternalModuleDependencies = @()
 
     } # End of PSData hashtable
+    other = @{
+        test = 1
+    }
 } # End of PrivateData hashtable
 
 # HelpInfo URI of this module

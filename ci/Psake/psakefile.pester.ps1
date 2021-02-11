@@ -1,6 +1,7 @@
 task test -depends pester_CheckStorageEmulator,pester_enable,Pester_setupConString_local,Pester_setupConString_ci,pester_run,pester_disable
 
 task pester_run -action {
+    $env:pester_test_folder = 
     $pesterHelp|?{$_.name -like "*.ps1"}|%{
         . $_.fullname
     }

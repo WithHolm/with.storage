@@ -8,6 +8,10 @@ Properties {
 Properties {
     $TempFolder = Join-Path $env:TEMP (split-path $psake.build_script_dir -Leaf)
     $StorageEmulatorPath = "C:\Program Files (x86)\Microsoft SDKs\Azure\Storage Emulator\AzureStorageEmulator.exe"
+    $ModulePath
+
+
+
     $ModulePath = Join-Path $TempFolder $ModuleName
     $ModuleFile = Join-Path $ModulePath "$ModuleName.psm1"
     $pesterHelp = gci "$($psake.build_script_dir)/ci/pester"
@@ -24,8 +28,10 @@ gci $psake.build_script_dir -Filter "psakefile.*.ps1"|%{
 }
 
 task checkVersion {
+    #check powershell version
     Assert ($PSVersionTable.PSVersion -ge 7.0.0) -failureMessage "build needs pwsh 7 or newer"
 
+    #check dotnet version
     try
     {
         if ((Get-PSDrive 'HKLM' -ErrorAction Ignore) -and (-not (Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full\' -ErrorAction Stop | Get-ItemPropertyValue -ErrorAction Stop -Name Release | Where { $_ -ge 461808 })))
@@ -53,7 +59,7 @@ task copyToTemp{
     $ModuleDir = gci $($psake.build_script_dir) -Filter "$ModuleName.psm1" -Force -Recurse -File|%{$_.Directory}
     if(@($ModuleDir).count -ne 1)
     {
-        throw "Was suppoed to find one '$modulename.psm1' file. found $(@($ModuleDir).count)"
+        throw "Was supposed to find one '$modulename.psm1' file. found $(@($ModuleDir).count)"
     }
     else {
         Write-host "copying from '$($ModuleDir.FullName)' to '$TempFolder'"

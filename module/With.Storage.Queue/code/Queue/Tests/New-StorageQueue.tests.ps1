@@ -15,7 +15,7 @@ InModuleScope "With.Storage.Queue"{
         }
     
         it "Will test name"{
-            mock -CommandName Test-StorageQueueName -MockWith {return @()}
+            mock -CommandName Test-StorageQueueName -MockWith {return (,@())}
             $k = New-StorageQueue -Client $client -Name 'kkk'
             Assert-MockCalled -CommandName Test-StorageQueueName
         }
