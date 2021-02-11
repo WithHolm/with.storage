@@ -2,7 +2,8 @@
 #used for loading all file when developing
 if(test-path (join-path $PSScriptRoot 'Template.psd1'))
 {
-    gci $PSScriptRoot -Recurse -Filter '*.ps1'|?{$_.name -notlike "*.tests.ps1"}|%{
+    #loads all ps1 files except the ones names .tests.ps1 or is in a beta folder
+    gci $PSScriptRoot -Recurse -Filter '*.ps1'|?{$_.name -notlike "*.tests.ps1"}|?{$_.Directory.name -notin 'beta'}|%{
         . $_.FullName
     }
 }

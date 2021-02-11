@@ -1,4 +1,4 @@
-InModuleScope "fun.storage"{
+InModuleScope "With.Storage.Queue"{
     Describe "New-StorageQueue" -Tag 'cmdlet','queue'{
         BeforeEach{
             $client = New-StorageQueueClient -Connectionstring $env:PesterStorageConnectionString

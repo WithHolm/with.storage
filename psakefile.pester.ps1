@@ -5,17 +5,26 @@ task pester_run -action {
         . $_.fullname
     }
 
-    ipmo "$ModulePath/template.psd1"
-    Write-host "Invoking pester on tag 'module'"
-    invoke-pester -Script $ModulePath -tag 'Module'
+    write-host "importing module file $ModuleFile"
+    if(get-module $modulename)
+    {
+        get-module $modulename|remove-module
+    }
+    ipmo $ModuleFile -Force
+    # Write-host "Invoking pester on tag 'module'"
+    # invoke-pester -Script $ModulePath -tag 'Module'
 
     # $TestFiles = Get-ChildItem $ModulePath -Recurse -Filter "*.tests.ps1" -File
     $total = 0
     foreach ($tag in 'module', "cmdlet")
     {
+        if([string]::IsNullOrEmpty($env:PesterStorageConnectionString))
+        {
+            throw "env:PesterStorageConnectionString is not set. cannot test"
+        }
         write-host "testing '$tag'"
         
-        $pester = invoke-pester $ModulePath -PassThru -Tag $tag -Output Detailed
+        $pester = invoke-pester $ModulePath -PassThru -Tag $tag
         if ($pester.FailedCount -gt 0)
         {
             throw "$tag tests: $($pester.FailedCount) pester tests failed"
@@ -45,7 +54,7 @@ task pester_disable {
     $global:pesteractive = $false 
 }
 
-task pester_CheckStorageEmulator -precondition { $env:CI -ne $true } {
+task pester_CheckStorageEmulator -precondition { $env:CI -ne $true } -action {
     if (test-path $StorageEmulatorPath)
     {
         $statusSb = { exec -cmd { & $StorageEmulatorPath status } | Where-Object { $_ -like "*:*" } | ConvertFrom-StringData -Delimiter ':' }
@@ -65,6 +74,9 @@ task pester_CheckStorageEmulator -precondition { $env:CI -ne $true } {
                 throw "Cannot start storage emulator"
             }
         }
+        else {
+            Write-host "Storage Emulator is running"
+        }
     }
     else
     {
@@ -72,7 +84,7 @@ task pester_CheckStorageEmulator -precondition { $env:CI -ne $true } {
     }
 }
 
-task Pester_setupConString_local { $env:CI -ne $true } {
+task Pester_setupConString_local -precondition  { $env:CI -ne $true } -action {
     Write-host "Setting up connection string to use "
     # Standard key to storage emulator
     $keyhash = [ordered]@{
@@ -87,6 +99,6 @@ task Pester_setupConString_local { $env:CI -ne $true } {
             "$($_.Key)=$($_.Value);" }) -join ""
 }
 
-task Pester_setupConString_ci {$env:CI -eq $true}{
+task Pester_setupConString_ci -precondition {$env:CI -eq $true} -action {
     $env:PesterStorageConnectionString = $env:StorageConnectionString
 }

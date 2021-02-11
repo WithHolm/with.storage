@@ -18,7 +18,7 @@ function New-StorageQueue {
     )
     
     begin {
-        $ValidateName = Test-FunQueueName -Name $Name
+        $ValidateName = Test-StorageQueueName -Name $Name
         if($ValidateName.count -gt 0)
         {
             throw "Error validating queue-name '$name': $($ValidateName -join ", ")"

@@ -41,12 +41,14 @@ function Test-StorageQueueName {
                 response = "have to be max 63 characters"
             }
         )
+        $return = @()
         foreach($test in $validatetests)
         {
             if($test.test)
             {
-                $test.response
+                $return += $test.response
             }
         }
+        Write-Output (,$return)
     }
 }

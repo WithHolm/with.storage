@@ -31,11 +31,11 @@ function Connect-StorageQueue {
         Write-Verbose "connected with client '$($client.BaseUri)'"
 
 
-        $Queue = Get-funQueue -Client $client -Name $Name
+        $Queue = Get-StorageQueue -Client $client -Name $Name
 
         if($CreateIfNotExist -and [string]::IsNullOrEmpty($Queue))
         {
-            $Queue = New-funQueue -Client $client -Name $Name
+            $Queue = New-StorageQueue -Client $client -Name $Name
         }
         
         if(!$Queue)

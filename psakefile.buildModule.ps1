@@ -65,3 +65,7 @@ task createManifest -depends cleanmodule {
 
     get-item $TemplateFile|Remove-Item
 }
+
+task testload {
+    # ipmo
+}

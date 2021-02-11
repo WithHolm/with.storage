@@ -1,5 +1,5 @@
 describe "Test-StorageQueueName" -tag 'cmdlet','queue'{
-    InModuleScope "Fun.Storage"{
+    InModuleScope "With.Storage.Queue"{
         <#
             * A queue name must start with a letter or number, and can only contain letters, numbers, and the dash (-) character.
             * The first and last letters in the queue name must be alphanumeric. The dash (-) character cannot be the first or last character. Consecutive dash characters are not permitted in the queue name.
@@ -82,7 +82,7 @@ describe "Test-StorageQueueName" -tag 'cmdlet','queue'{
             )
             if($type -eq 'fail')
             {
-                $Validate = (Test-StorageQueueName -Name $name)
+                $Validate = @(Test-StorageQueueName -Name $name)
                 $Validate.count |should -be 1 -Because "should only have one error: $($Validate -join ', ')"
             }
             else {
