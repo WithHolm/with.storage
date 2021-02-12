@@ -1,26 +1,53 @@
 param(
     [ValidateNotNullOrEmpty()]
-    [String]$ModuleName
+    [String]$ModuleName,
+    [String]$TestOneFile
 )
 Properties {
-    $InformationPreference = "contiune"
-}
-Properties {
-    $TempFolder = Join-Path $env:TEMP (split-path $psake.build_script_dir -Leaf)
+    $Ci = $env:ci -eq $true
     $StorageEmulatorPath = "C:\Program Files (x86)\Microsoft SDKs\Azure\Storage Emulator\AzureStorageEmulator.exe"
-    $ModulePath
+    $Root = git rev-parse --show-toplevel  
+    if($TestOneFile)
+    {
+        if($TestOneFile -notlike "*.ps1")
+        {
+            write-warning "Can't test non-powershell files"
+            throw "Can't test non-powershell files"
+        }
+        if($TestOneFile -like "*psakefile*")
+        {
+            write-warning "Ignoring psakefiles"
+            throw "Ignoring psakefiles"
+        }
+        Write-host "Getting module of '$TestOneFile'"
+        $dir = (get-item $TestOneFile).Directory
+        :modulesearch While((gci $dir.fullname -Filter "*.psm1").count -lt 1 )
+        {
+            if($dir.FullName -eq $Root -or $dir.FullName -eq $dir.Root)
+            {
+                throw "Cannot search any further as ive reached the root of the project"
+            }
+            $dir = $dir.Parent
+            # write-host $dir
+        }
+        # Write-host $dir
+        $modulename = $dir.Name
+    }
 
+    $ModulePath = join-path $root "module/$modulename" -Resolve
+    $ModuleFile = join-path $ModulePath "$modulename.psm1" -Resolve
+    
+    $TempFolder = Join-Path $env:TEMP "with.storage"
+    $TempModulePath = Join-Path $env:TEMP "with.storage/$modulename"
 
-
-    $ModulePath = Join-Path $TempFolder $ModuleName
-    $ModuleFile = Join-Path $ModulePath "$ModuleName.psm1"
-    $pesterHelp = gci "$($psake.build_script_dir)/ci/pester"
+    # $ModulePath = Join-Path $TempFolder $ModuleName
+    # $ModuleFile = Join-Path $ModulePath "$ModuleName.psm1"
+    # $pesterHelp = gci "$($psake.build_script_dir)/ci/pester"
 }
 
-task default 
-
-task build -depends prep,test,compile
-task prep -depends checkVersion,CopyToTemp,Pester_addGeneralTestsToTemp
+task default -depends checkVersion
+task build -depends default,pretest,compile
+# task prep -depends checkVersion,CopyToTemp,Pester_addGeneralTestsToTemp
 
 gci $psake.build_script_dir -Filter "psakefile.*.ps1"|%{
     Write-host "importing psakefile $_"
@@ -42,27 +69,5 @@ task checkVersion {
     catch [System.Management.Automation.DriveNotFoundException]
     {
         Write-host ".NET Framework version check failed."
-    }
-}
-
-task copyToTemp{
-    if (!(Test-Path $TempFolder))
-    {
-        Write-Host "Creating '$TempFolder'"
-        New-Item $TempFolder -ItemType Directory | Out-Null
-    }
-    else
-    {
-        Write-Host "Cleaning '$TempFolder'"
-        Get-ChildItem $TempFolder -Force | remove-item -Recurse -Force
-    }
-    $ModuleDir = gci $($psake.build_script_dir) -Filter "$ModuleName.psm1" -Force -Recurse -File|%{$_.Directory}
-    if(@($ModuleDir).count -ne 1)
-    {
-        throw "Was supposed to find one '$modulename.psm1' file. found $(@($ModuleDir).count)"
-    }
-    else {
-        Write-host "copying from '$($ModuleDir.FullName)' to '$TempFolder'"
-        $ModuleDir| copy-item -Container -Destination $ModulePath -Recurse -Force
     }
 }

@@ -1,37 +1,59 @@
-task compile -depends prep,module_defineManifest
-task module_defineManifest -depends module_import_manifest,module_set_exportcommands,module_set_otherinfo,module_save_manifest
-
+task compile -depends module_copyToTemp,module_clean,module_defineManifest
+task module_defineManifest -depends module_manifest_load,module_manifest_set_exportcommands,module_manifest_set_otherinfo,module_manifest_save
 
 task module_clean {
-    write-host "cleaning $ModulePath for pester files"
-    gci $ModulePath -Filter "*tests.ps1" -File -Recurse|Remove-Item -Recurse
-    gci $ModulePath -Directory -Recurse|?{(gci $_.FullName -Force).count -eq 0}|remove-item -Force
-    gci $ModulePath -Filter ".nuget"|Remove-Item
+    write-host "cleaning $TempModulePath for pester files"
+    gci $TempModulePath -Filter "*tests.ps1" -File -Recurse|Remove-Item -Recurse
+    gci $TempModulePath -Directory -Recurse|?{(gci $_.FullName -Force).count -eq 0}|remove-item -Force
+    gci $TempModulePath -Filter ".nuget",".dev"|Remove-Item
 }
 
-task module_import_manifest{
-    $TemplateFile = join-path $ModulePath "template.psd1"
-    $moduleFile = get-item $ModuleFile
+task module_copyToTemp{
+    if (!(Test-Path $TempFolder))
+    {
+        Write-Host "Creating '$TempFolder'"
+        New-Item $TempFolder -ItemType Directory | Out-Null
+    }
+    else
+    {
+        Write-Host "Cleaning '$TempFolder'"
+        Get-ChildItem $TempFolder -Force | remove-item -Recurse -Force
+    }
+
+    get-item $ModulePath|copy-item -Destination $TempFolder -Recurse -Force
+}
+
+task module_test_load{
+    ipmo $TempModulePath -Force
+    module $modulename
+}
+
+task module_manifest_load{
+    $TemplateFile = gci $TempModulePath -Filter "*.psd1"|select -first 1
+    if(!$TemplateFile)
+    {
+        throw "Could not find a psd1 file in $TempModulePath"
+    }
     if(!(test-path $TemplateFile))
     {
-        New-ModuleManifest -Path $TemplateFile -RootModule $moduleFile.Name
+        New-ModuleManifest -Path $TemplateFile.FullName -RootModule "$ModuleName.psm1"
     }
-    $Script:Manifest = Import-PowerShellDataFile -Path $TemplateFile
+    $Script:Manifest = Import-PowerShellDataFile -Path $TemplateFile.FullName
 }
 
-task module_save_manifest -depends module_import_manifest{
+task module_manifest_save -depends module_import_manifest{
     $datafile = $script:Manifest.clone()
     $datafile.privatedata.remove('PSdata')
-    $datafile.path = (join-path $ModulePath "$($moduleFile.BaseName).psd1")
+    $datafile.path = (join-path $TempModulePath "$modulename.psd1")
     New-ModuleManifest @datafile
-    get-item $TemplateFile|Remove-Item
+    gci $TempModulePath -Filter "*.psd1"|?{$_.name -ne "$modulename.psd1"}|remove-item
 }
 
-task module_set_exportcommands -depends module_import_manifest{
+task module_manifest_set_exportcommands -depends module_import_manifest{
     #nothing to do with this yet
-    $privCommands = gci $ModulePath -Filter "*.ps1" -Recurse|?{$_.Directory.name -eq "private"}
+    $privCommands = gci $TempModulePath -Filter "*.ps1" -Recurse|?{$_.Directory.name -eq "private"}
 
-    $pubCommands = gci $ModulePath -Filter "*.ps1" -Recurse|?{$_.Directory.name -eq "public"}
+    $pubCommands = gci $TempModulePath -Filter "*.ps1" -Recurse|?{$_.Directory.name -eq "public"}
 
     $exportcommands = $pubCommands|%{
         # Write-host $_.FullName
@@ -57,7 +79,7 @@ task module_set_exportcommands -depends module_import_manifest{
     $script:Manifest.FunctionsToExport += $script:Manifest.CmdletsToExport += @($ExportCommands)
 }
 
-task module_set_otherinfo -depends module_import_manifest{
+task module_manifest_set_otherinfo -depends module_import_manifest{
 
     #Add project site
     $script:Manifest.privatedata.PSData.ProjectUri = "https://github.com/withholm/with.storage"
@@ -70,8 +92,4 @@ task module_set_otherinfo -depends module_import_manifest{
 
     #add version
     $script:Manifest.ModuleVersion = (get-date).ToString("yy.mm.dd")
-}
-
-task module_test_manifest {
-
 }

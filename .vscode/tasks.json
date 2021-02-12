@@ -1,0 +1,67 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Test Module",
+            "type": "shell",
+            "command": "pwsh",
+            "args": [
+                "-command",
+                "Invoke-Psake -taskList pretest -parameters @{ModuleName = $env:moduleName} -notr -nologo"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ci/psake",
+                "env": {
+                    "ModuleName" : "${input:moduleName}"
+                }
+            },
+            "problemMatcher":[]
+        },
+        {
+            "label": "Test File",
+            "type": "shell",
+            "command": "pwsh",
+            "args": [
+                "-command",
+                "Invoke-Psake -taskList pretest -parameters @{TestOneFile = $env:TestOneFile} -notr -nologo"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ci/psake",
+                "env": {
+                    "TestOneFile" : "${file}"
+                }
+            },
+            "problemMatcher":[]
+        },
+        {
+            "label": "Compile Module",
+            "type": "shell",
+            "command": "pwsh",
+            "args": [
+                "-command",
+                "Invoke-Psake -taskList build -parameters @{ModuleName = $env:moduleName} -notr -nologo"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/ci/psake",
+                "env": {
+                    "ModuleName" : "${input:moduleName}"
+                }
+            },
+            "problemMatcher":[]
+        },
+
+    ],
+    "inputs": [
+        {
+            "id": "moduleName",
+            "type": "command",
+            "command": "shellCommand.execute",
+            "args":{
+                "command":"pwsh -command (gci $pwd.path -directory).name",
+                "cwd": "${workspaceFolder}/module"
+            }
+        }
+    ]
+}

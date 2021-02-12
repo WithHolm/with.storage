@@ -1,51 +1,93 @@
-task test -depends pester_CheckStorageEmulator,pester_enable,Pester_setupConString_local,Pester_setupConString_ci,pester_run,pester_disable
 
-task pester_run -action {
-    $env:pester_test_folder = 
-    $pesterHelp|?{$_.name -like "*.ps1"}|%{
+task pretest -depends pester_prep,pester_pre_run,pester_disable
+
+task posttest -depends pester_prep,pester_post_run,pester_disable
+
+task pester_prep -depends default,pester_CheckStorageEmulator,pester_enable,Pester_setupConString_local,Pester_setupConString_ci
+
+task pester_pre_run -action {
+    $env:pester_module_name = $modulename
+    $env:pester_module_fullname = $modulepath
+    #Set path of where to find pester help files
+    $pesterCI = join-path $root 'ci/pester' -Resolve
+
+    #import helpercommands
+    gci $pesterCI -file -Recurse -Filter "*.pester.ps1"|%{
         . $_.fullname
     }
 
-    write-host "importing module file $ModuleFile"
+    #import module
+    write-host "importing module $modulepath"
     if(get-module $modulename)
     {
         get-module $modulename|remove-module
     }
-    ipmo $ModuleFile -Force
-    # Write-host "Invoking pester on tag 'module'"
-    # invoke-pester -Script $ModulePath -tag 'Module'
+    ipmo $modulepath -Force
 
-    # $TestFiles = Get-ChildItem $ModulePath -Recurse -Filter "*.tests.ps1" -File
-    $total = 0
-    foreach ($tag in 'module', "cmdlet")
+    module $modulename
+
+    #add pesterfiles. safest way as i cannot know what cd im in right now
+    if($TestOneFile)
     {
+        $File = get-item $TestOneFile
+        if($file.BaseName -like "*.tests")
+        {
+            $TestFileName = $File.name
+        }
+        else {
+            $TestFileName = "$($File.BaseName).tests.ps1"
+        }
+
+        $TestFiles = Get-ChildItem $ModulePath -Recurse -Filter $TestFileName -File
+
+        if($null -eq $TestFiles)
+        {
+            Throw "Could not find a pester test for the file $testonefile. should be '$($File.BaseName).tests.ps1'"
+        }
+
+        invoke-pester -path $TestFiles -output detailed #-Show All  #-PassThru -
+    }
+    else {
+        $TestFiles = Get-ChildItem $ModulePath -Recurse -Filter "*.tests.ps1" -File
+        $TestFiles += Get-ChildItem $pesterCI -Recurse -Filter "*.pretests.ps1" -File 
+
         if([string]::IsNullOrEmpty($env:PesterStorageConnectionString))
         {
             throw "env:PesterStorageConnectionString is not set. cannot test"
         }
-        write-host "testing '$tag'"
+        write-host "testing tag '$tag'"
         
-        $pester = invoke-pester $ModulePath -PassThru -Tag $tag
+        $pester = invoke-pester $TestFiles -PassThru -Tag $tag
         if ($pester.FailedCount -gt 0)
         {
-            throw "$tag tests: $($pester.FailedCount) pester tests failed"
+            throw "$($pester.FailedCount) pester tests failed"
         }
         else
         {
             $total += $pester.TotalCount
         }
+        # $total = 0
+        # # $TestFiles 
+        # foreach ($tag in 'module', "cmdlet")
+        # {
+        # }
+        Write-Host "$total tests completed. no erors found!"
     }
-    Write-Host "$total tests completed. no erors found!"
+
 }
 
-task Pester_addGeneralTestsToTemp{
-    $pesterfiles = gci $psake.build_script_dir -Filter "*.tests.ps1" -File
-    $Destination = (join-path $TempFolder $ModuleName)
-    Write-host "Copying $(@($pesterfiles).count) pester files from root to '$Destination'"
-    $pesterfiles|%{
-        $_|copy-item -Destination $Destination
-    }
+task pester_post_run {
+
 }
+
+# task Pester_addGeneralTestsToTemp{
+#     $pesterfiles = gci $psake.build_script_dir -Filter "*.tests.ps1" -File
+#     $Destination = (join-path $TempFolder $ModuleName)
+#     Write-host "Copying $(@($pesterfiles).count) pester files from root to '$Destination'"
+#     $pesterfiles|%{
+#         $_|copy-item -Destination $Destination
+#     }
+# }
 
 task pester_enable { 
     $global:pesteractive = $true 
@@ -58,7 +100,13 @@ task pester_disable {
 task pester_CheckStorageEmulator -precondition { $env:CI -ne $true } -action {
     if (test-path $StorageEmulatorPath)
     {
-        $statusSb = { exec -cmd { & $StorageEmulatorPath status } | Where-Object { $_ -like "*:*" } | ConvertFrom-StringData -Delimiter ':' }
+        # $PSVersionTable
+        $statusSb = { 
+            exec -cmd { & $StorageEmulatorPath status } | 
+                Where-Object { $_ -like "*:*" } | 
+                    ConvertFrom-StringData -Delimiter ':' 
+        }
+
         $status = $statusSb.Invoke()
         #if its not started
         if (![bool]::Parse($status.isrunning))

@@ -19,7 +19,7 @@ function Connect-StorageQueue {
     begin {
         $Name = $Name.ToLower()
     }
-    
+
     process {
         if([string]::IsNullOrEmpty($Connectionstring))
         {
