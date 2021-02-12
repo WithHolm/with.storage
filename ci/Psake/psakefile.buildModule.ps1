@@ -5,7 +5,10 @@ task module_clean {
     write-host "cleaning $TempModulePath for pester files"
     gci $TempModulePath -Filter "*tests.ps1" -File -Recurse|Remove-Item -Recurse
     gci $TempModulePath -Directory -Recurse|?{(gci $_.FullName -Force).count -eq 0}|remove-item -Force
-    gci $TempModulePath -Filter ".nuget",".dev"|Remove-Item
+    gci $TempModulePath|?{
+        $_.name -in ".nuget",".dev"
+    }|Remove-Item
+    # gci $TempModulePath -Filter ".nuget",".dev"
 }
 
 task module_copyToTemp{
@@ -41,7 +44,7 @@ task module_manifest_load{
     $Script:Manifest = Import-PowerShellDataFile -Path $TemplateFile.FullName
 }
 
-task module_manifest_save -depends module_import_manifest{
+task module_manifest_save -depends module_manifest_load{
     $datafile = $script:Manifest.clone()
     $datafile.privatedata.remove('PSdata')
     $datafile.path = (join-path $TempModulePath "$modulename.psd1")
@@ -49,7 +52,7 @@ task module_manifest_save -depends module_import_manifest{
     gci $TempModulePath -Filter "*.psd1"|?{$_.name -ne "$modulename.psd1"}|remove-item
 }
 
-task module_manifest_set_exportcommands -depends module_import_manifest{
+task module_manifest_set_exportcommands -depends module_manifest_load{
     #nothing to do with this yet
     $privCommands = gci $TempModulePath -Filter "*.ps1" -Recurse|?{$_.Directory.name -eq "private"}
 
@@ -79,7 +82,7 @@ task module_manifest_set_exportcommands -depends module_import_manifest{
     $script:Manifest.FunctionsToExport += $script:Manifest.CmdletsToExport += @($ExportCommands)
 }
 
-task module_manifest_set_otherinfo -depends module_import_manifest{
+task module_manifest_set_otherinfo -depends module_manifest_load{
 
     #Add project site
     $script:Manifest.privatedata.PSData.ProjectUri = "https://github.com/withholm/with.storage"
@@ -91,5 +94,6 @@ task module_manifest_set_otherinfo -depends module_import_manifest{
     }
 
     #add version
-    $script:Manifest.ModuleVersion = (get-date).ToString("yy.mm.dd")
+    $ConsolidatedVersion = $script:Manifest.ModuleVersion -replace "0|\.",""
+    $script:Manifest.ModuleVersion = @($ConsolidatedVersion,(get-date).ToString("yyMM.dd")) -join "."
 }
